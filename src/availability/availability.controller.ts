@@ -1,9 +1,12 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Request, UseGuards } from '@nestjs/common';
 import { AvailabilityService } from './availability.service';
 import { CreateAvailabilityDto } from './dto/create-availability.dto';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @Controller('availability')
+@UseGuards(JwtAuthGuard)
+
 export class AvailabilityController {
     constructor(private readonly availabilityService: AvailabilityService) { }
 
@@ -13,7 +16,7 @@ export class AvailabilityController {
     }
 
     @Get()
-    findAll(@Request() req, @Query('startDate') startDate?: string, @Query('endDate') endDate?: string) {
+    async findAll(@Request() req, @Query('startDate') startDate?: string, @Query('endDate') endDate?: string) {
         if (startDate && endDate) {
             return this.availabilityService.findByDateRange(
                 req.user.id,
@@ -21,7 +24,13 @@ export class AvailabilityController {
                 new Date(endDate),
             );
         }
-        return this.availabilityService.findAll(req.user.id);
+        const availabilityData = await this.availabilityService.findAll(req.user.id);
+        if (availabilityData.length === 0) {
+            return { message: 'No availability data found for the user.' };
+        } else {
+            return availabilityData;
+        }
+        ;
     }
 
     @Get(':id')

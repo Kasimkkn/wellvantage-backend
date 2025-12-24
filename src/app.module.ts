@@ -9,6 +9,7 @@ import { BookingModule } from './booking/booking.module';
 import { Availability } from './availability/entities/availability.entity';
 import { Booking } from './booking/entities/booking.entity';
 import { UsersModule } from './users/users.module';
+import { User } from './users/entities/user.entity';
 
 @Module({
   imports: [
@@ -24,7 +25,7 @@ import { UsersModule } from './users/users.module';
         username: configService.get('DATABASE_USER'),
         password: configService.get('DATABASE_PASSWORD'),
         database: configService.get('DATABASE_NAME'),
-        entities: [Availability, Booking],
+        entities: [Availability, Booking, User],
         synchronize: true, // Set to false in production
       }),
       inject: [ConfigService],

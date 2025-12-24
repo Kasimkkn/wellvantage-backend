@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { UsersModule } from 'src/users/users.module';
+import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
     imports: [
@@ -17,14 +18,14 @@ import { UsersModule } from 'src/users/users.module';
             useFactory: (configService: ConfigService) => ({
                 secret: configService.get<string>('JWT_SECRET')!,
                 signOptions: {
-                    expiresIn: configService.get<number>('JWT_EXPIRATION', 3600),
+                    expiresIn: '1h',
 
                 },
             }),
         }),
     ],
     controllers: [AuthController],
-    providers: [AuthService, GoogleStrategy],
+    providers: [AuthService, GoogleStrategy, JwtStrategy],
     exports: [AuthService],
 })
 export class AuthModule { }
