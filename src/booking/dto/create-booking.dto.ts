@@ -7,8 +7,8 @@ export class CreateBookingDto {
     availabilityId: string;
 
     @IsNotEmpty()
-    @IsDateString()
-    bookingDate: Date;
+    @IsDateString({}, { message: 'bookingDate must be a valid ISO 8601 string' })
+    bookingDate: string;
 
     @IsNotEmpty()
     @IsString()

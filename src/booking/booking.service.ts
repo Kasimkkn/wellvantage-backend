@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+    Injectable,
+    NotFoundException,
+    BadRequestException,
+    InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Booking, BookingStatus } from './entities/booking.entity';
@@ -9,38 +14,43 @@ import { AvailabilityService } from '../availability/availability.service';
 export class BookingService {
     constructor(
         @InjectRepository(Booking)
-        private bookingRepository: Repository<Booking>,
-        private availabilityService: AvailabilityService,
+        private readonly bookingRepository: Repository<Booking>,
+        private readonly availabilityService: AvailabilityService,
     ) { }
 
-    async create(userId: string, createBookingDto: CreateBookingDto): Promise<Booking> {
-        // Verify availability exists
-        const availability = await this.availabilityService.findOne(
-            createBookingDto.availabilityId,
-            userId,
-        );
+    async create(userId: string, dto: CreateBookingDto): Promise<Booking> {
 
-        // Check if slot is already booked
-        const existingBooking = await this.bookingRepository.findOne({
-            where: {
-                availabilityId: createBookingDto.availabilityId,
-                bookingDate: createBookingDto.bookingDate,
-                startTime: createBookingDto.startTime,
-                status: BookingStatus.BOOKED,
-            },
-        });
+        const bookingDate = dto.bookingDate;
+        const overlappingBooking = await this.bookingRepository
+            .createQueryBuilder('booking')
+            .where('booking.availabilityId = :availabilityId', { availabilityId: dto.availabilityId })
+            .andWhere('booking.bookingDate = :bookingDate', { bookingDate })
+            .andWhere('booking.status != :cancelled', { cancelled: 'cancelled' }) // any non-cancelled booking counts
+            .andWhere('booking.startTime < :endTime AND booking.endTime > :startTime', {
+                startTime: dto.startTime,
+                endTime: dto.endTime,
+            })
+            .getOne();
 
-        if (existingBooking) {
+        if (overlappingBooking) {
             throw new BadRequestException('This time slot is already booked');
         }
 
-        const booking = this.bookingRepository.create({
-            ...createBookingDto,
-            userId,
-        });
+        try {
+            const booking = this.bookingRepository.create({
+                ...dto,
+                userId,
+                status: BookingStatus.BOOKED,
+            });
 
-        return this.bookingRepository.save(booking);
+            return await this.bookingRepository.save(booking);
+        } catch (error) {
+            console.error('Booking creation error:', error);
+            throw new InternalServerErrorException('Failed to create booking');
+        }
     }
+
+
 
     async findAllByUser(userId: string): Promise<Booking[]> {
         return this.bookingRepository.find({
@@ -71,10 +81,20 @@ export class BookingService {
         return booking;
     }
 
-    async updateStatus(id: string, status: BookingStatus): Promise<Booking> {
+    async updateStatus(
+        id: string,
+        status: BookingStatus,
+    ): Promise<Booking> {
         const booking = await this.findOne(id);
         booking.status = status;
-        return this.bookingRepository.save(booking);
+
+        try {
+            return await this.bookingRepository.save(booking);
+        } catch (error) {
+            throw new InternalServerErrorException(
+                'Failed to update booking status',
+            );
+        }
     }
 
     async remove(id: string, userId: string): Promise<void> {
@@ -86,6 +106,10 @@ export class BookingService {
             throw new NotFoundException(`Booking with ID ${id} not found`);
         }
 
-        await this.bookingRepository.remove(booking);
+        try {
+            await this.bookingRepository.remove(booking);
+        } catch (error) {
+            throw new InternalServerErrorException('Failed to delete booking');
+        }
     }
 }

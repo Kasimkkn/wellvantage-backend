@@ -5,6 +5,7 @@ import { Availability } from '../../availability/entities/availability.entity';
 export enum BookingStatus {
     OPEN = 'open',
     BOOKED = 'booked',
+    CANCELLED = 'cancelled',
 }
 
 @Entity('bookings')
@@ -19,7 +20,7 @@ export class Booking {
     userId: string;
 
     @Column({ type: 'date', name: 'booking_date' })
-    bookingDate: Date;
+    bookingDate: string;
 
     @Column({ type: 'time', name: 'start_time' })
     startTime: string;
