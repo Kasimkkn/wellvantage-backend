@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+    Injectable,
+    NotFoundException,
+    BadRequestException,
+    InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Availability } from './entities/availability.entity';
@@ -9,55 +14,107 @@ import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 export class AvailabilityService {
     constructor(
         @InjectRepository(Availability)
-        private availabilityRepository: Repository<Availability>,
+        private readonly availabilityRepo: Repository<Availability>,
     ) { }
 
-    async create(userId: string, createAvailabilityDto: CreateAvailabilityDto): Promise<Availability> {
-        const availability = this.availabilityRepository.create({
-            ...createAvailabilityDto,
-            userId,
-        });
-        return this.availabilityRepository.save(availability);
+    async create(
+        userId: string,
+        dto: CreateAvailabilityDto,
+    ): Promise<Availability> {
+        try {
+            const availability = this.availabilityRepo.create({
+                ...dto,
+                userId,
+            });
+
+            return await this.availabilityRepo.save(availability);
+        } catch (error) {
+            throw new InternalServerErrorException(
+                'Unable to create availability',
+            );
+        }
     }
 
     async findAll(userId: string): Promise<Availability[]> {
-        return this.availabilityRepository.find({
+        return this.availabilityRepo.find({
             where: { userId },
-            order: { date: 'ASC', startTime: 'ASC' },
+            order: {
+                date: 'ASC',
+                startTime: 'ASC',
+            },
         });
     }
 
-    async findByDateRange(userId: string, startDate: Date, endDate: Date): Promise<Availability[]> {
-        return this.availabilityRepository.find({
+    async findByDateRange(
+        userId: string,
+        startDate: Date,
+        endDate: Date,
+    ): Promise<Availability[]> {
+        if (startDate > endDate) {
+            throw new BadRequestException(
+                'startDate must be before endDate',
+            );
+        }
+
+        return this.availabilityRepo.find({
             where: {
                 userId,
                 date: Between(startDate, endDate),
             },
-            order: { date: 'ASC', startTime: 'ASC' },
+            order: {
+                date: 'ASC',
+                startTime: 'ASC',
+            },
         });
     }
 
-    async findOne(id: string, userId: string): Promise<Availability> {
-        const availability = await this.availabilityRepository.findOne({
+    async findOne(
+        id: string,
+        userId: string,
+    ): Promise<Availability> {
+        const availability = await this.availabilityRepo.findOne({
             where: { id, userId },
         });
 
         if (!availability) {
-            throw new NotFoundException(`Availability with ID ${id} not found`);
+            throw new NotFoundException(
+                'Availability not found',
+            );
         }
 
         return availability;
     }
 
-    async update(id: string, userId: string, updateAvailabilityDto: UpdateAvailabilityDto): Promise<Availability> {
+    async update(
+        id: string,
+        userId: string,
+        dto: UpdateAvailabilityDto,
+    ): Promise<Availability> {
         const availability = await this.findOne(id, userId);
 
-        Object.assign(availability, updateAvailabilityDto);
-        return this.availabilityRepository.save(availability);
+        Object.assign(availability, dto);
+
+        try {
+            return await this.availabilityRepo.save(availability);
+        } catch {
+            throw new InternalServerErrorException(
+                'Unable to update availability',
+            );
+        }
     }
 
-    async remove(id: string, userId: string): Promise<void> {
+    async remove(
+        id: string,
+        userId: string,
+    ): Promise<void> {
         const availability = await this.findOne(id, userId);
-        await this.availabilityRepository.remove(availability);
+
+        const result = await this.availabilityRepo.delete(availability.id);
+
+        if (result.affected === 0) {
+            throw new InternalServerErrorException(
+                'Failed to delete availability',
+            );
+        }
     }
 }

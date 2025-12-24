@@ -3,7 +3,7 @@ import { IsNotEmpty, IsString, IsBoolean, IsDateString } from 'class-validator';
 export class CreateAvailabilityDto {
     @IsNotEmpty()
     @IsDateString()
-    date: Date;
+    date: string;
 
     @IsNotEmpty()
     @IsString()
