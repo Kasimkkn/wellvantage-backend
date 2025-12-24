@@ -8,6 +8,7 @@ import { AvailabilityModule } from './availability/availability.module';
 import { BookingModule } from './booking/booking.module';
 import { Availability } from './availability/entities/availability.entity';
 import { Booking } from './booking/entities/booking.entity';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { Booking } from './booking/entities/booking.entity';
       }),
       inject: [ConfigService],
     }),
+    UsersModule,
     AuthModule,
     AvailabilityModule,
     BookingModule,

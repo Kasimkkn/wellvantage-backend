@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
+import { User } from '../../users/entities/user.entity';
 import { Booking } from '../../booking/entities/booking.entity';
 
 @Entity('availabilities')
@@ -29,6 +30,10 @@ export class Availability {
 
     @UpdateDateColumn({ name: 'updated_at' })
     updatedAt: Date;
+
+    @ManyToOne(() => User, (user) => user.availabilities)
+    @JoinColumn({ name: 'user_id' })
+    user: User;
 
     @OneToMany(() => Booking, (booking) => booking.availability)
     bookings: Booking[];

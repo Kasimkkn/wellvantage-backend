@@ -1,4 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { User } from '../../users/entities/user.entity';
 import { Availability } from '../../availability/entities/availability.entity';
 
 export enum BookingStatus {
@@ -43,4 +44,7 @@ export class Booking {
     @JoinColumn({ name: 'availability_id' })
     availability: Availability;
 
+    @ManyToOne(() => User, (user) => user.bookings)
+    @JoinColumn({ name: 'user_id' })
+    user: User;
 }
