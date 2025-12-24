@@ -1,26 +1,32 @@
-import { Controller, Get, UseGuards, Request, Response } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { Controller, Post, Body, Get, UseGuards, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { ConfigService } from '@nestjs/config';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
-    constructor(
-        private authService: AuthService,
-        private configService: ConfigService,
-    ) { }
+    constructor(private authService: AuthService) { }
 
-    @Get('google')
-    @UseGuards(AuthGuard('google'))
-    async googleAuth() {
+    @Post('google/verify')
+    async googleVerify(@Body() body: {
+        googleId: string;
+        email: string;
+        name: string;
+        profilePicture?: string;
+        accessToken: string;
+    }) {
+        const user = await this.authService.validateGoogleUser({
+            id: body.googleId,
+            emails: [{ value: body.email }],
+            displayName: body.name,
+            photos: body.profilePicture ? [{ value: body.profilePicture }] : [],
+        });
+
+        return this.authService.login(user);
     }
 
-    @Get('google/callback')
-    @UseGuards(AuthGuard('google'))
-    async googleAuthRedirect(@Request() req, @Response() res) {
-        const { access_token } = await this.authService.login(req.user);
-        const frontendUrl = this.configService.get<string>('FRONTEND_URL');
-        res.redirect(`${frontendUrl}?token=${encodeURIComponent(access_token)}`
-        );
+    @UseGuards(JwtAuthGuard)
+    @Get('me')
+    async getProfile(@Request() req) {
+        return req.user;
     }
 }
