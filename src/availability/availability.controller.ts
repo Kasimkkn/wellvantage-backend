@@ -1,84 +1,50 @@
-import {
-    BadRequestException,
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    Patch,
-    Post,
-    Query,
-    Request,
-    UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query } from '@nestjs/common';
 import { AvailabilityService } from './availability.service';
 import { CreateAvailabilityDto } from './dto/create-availability.dto';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { ParseUUIDPipe } from '@nestjs/common';
+import { UsersService } from '../users/users.service';
 
 @Controller('availability')
-@UseGuards(JwtAuthGuard)
 export class AvailabilityController {
-    constructor(private readonly availabilityService: AvailabilityService) { }
+    constructor(
+        private readonly availabilityService: AvailabilityService,
+        private readonly usersService: UsersService, // Inject UsersService
+    ) { }
 
     @Post()
-    create(@Request() req, @Body() dto: CreateAvailabilityDto) {
-        if (!req.user?.id) {
-            throw new BadRequestException('Invalid user');
-        }
-        return this.availabilityService.create(req.user.id, dto);
+    async create(@Body() createAvailabilityDto: CreateAvailabilityDto) {
+        const user = await this.usersService.getDefaultUser();
+        return this.availabilityService.create(user.id, createAvailabilityDto);
     }
 
     @Get()
-    async findAll(
-        @Request() req,
-        @Query('startDate') startDate?: string,
-        @Query('endDate') endDate?: string,
-    ) {
+    async findAll(@Query('startDate') startDate?: string, @Query('endDate') endDate?: string) {
+        const user = await this.usersService.getDefaultUser();
         if (startDate && endDate) {
-            const start = new Date(startDate);
-            const end = new Date(endDate);
-
-            if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-                throw new BadRequestException('Invalid date format');
-            }
-
-            if (start > end) {
-                throw new BadRequestException('startDate must be before endDate');
-            }
-
-            return this.availabilityService.findByDateRange(req.user.id, start, end);
+            return this.availabilityService.findByDateRange(
+                user.id,
+                new Date(startDate),
+                new Date(endDate),
+            );
         }
-
-        return this.availabilityService.findAll(req.user.id);
+        return this.availabilityService.findAll(user.id);
     }
 
     @Get(':id')
-    findOne(
-        @Param('id', new ParseUUIDPipe()) id: string,
-        @Request() req,
-    ) {
-        return this.availabilityService.findOne(id, req.user.id);
+    async findOne(@Param('id') id: string) {
+        const user = await this.usersService.getDefaultUser();
+        return this.availabilityService.findOne(id, user.id);
     }
 
     @Patch(':id')
-    update(
-        @Param('id', new ParseUUIDPipe()) id: string,
-        @Request() req,
-        @Body() dto: UpdateAvailabilityDto,
-    ) {
-        if (Object.keys(dto).length === 0) {
-            throw new BadRequestException('At least one field must be updated');
-        }
-        return this.availabilityService.update(id, req.user.id, dto);
+    async update(@Param('id') id: string, @Body() updateAvailabilityDto: UpdateAvailabilityDto) {
+        const user = await this.usersService.getDefaultUser();
+        return this.availabilityService.update(id, user.id, updateAvailabilityDto);
     }
 
     @Delete(':id')
-    remove(
-        @Param('id', new ParseUUIDPipe()) id: string,
-        @Request() req,
-    ) {
-        return this.availabilityService.remove(id, req.user.id);
+    async remove(@Param('id') id: string) {
+        const user = await this.usersService.getDefaultUser();
+        return this.availabilityService.remove(id, user.id);
     }
 }

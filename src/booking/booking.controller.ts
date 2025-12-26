@@ -1,57 +1,46 @@
-import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    Patch,
-    Post,
-    Request,
-    UseGuards,
-    ParseUUIDPipe,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Patch } from '@nestjs/common';
 import { BookingService } from './booking.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { UsersService } from '../users/users.service';
 
 @Controller('booking')
-@UseGuards(JwtAuthGuard)
 export class BookingController {
-    constructor(private readonly bookingService: BookingService) { }
+    constructor(
+        private readonly bookingService: BookingService,
+        private readonly usersService: UsersService,
+    ) { }
 
     @Post()
-    create(@Request() req, @Body() dto: CreateBookingDto) {
-        return this.bookingService.create(req.user.id, dto);
+    async create(@Body() createBookingDto: CreateBookingDto) {
+        const user = await this.usersService.getDefaultUser();
+        return this.bookingService.create(user.id, createBookingDto);
     }
 
     @Get()
-    findAllByUser(@Request() req) {
-        return this.bookingService.findAllByUser(req.user.id);
+    async findAllByUser() {
+        const user = await this.usersService.getDefaultUser();
+        return this.bookingService.findAllByUser(user.id);
     }
 
     @Get('availability/:availabilityId')
-    findAllByAvailability(
-        @Param('availabilityId', new ParseUUIDPipe()) availabilityId: string,
-    ) {
+    async findAllByAvailability(@Param('availabilityId') availabilityId: string) {
         return this.bookingService.findAllByAvailability(availabilityId);
     }
 
     @Get(':id')
-    findOne(@Param('id', new ParseUUIDPipe()) id: string) {
+    async findOne(@Param('id') id: string) {
         return this.bookingService.findOne(id);
     }
 
     @Patch(':id/status')
-    updateStatus(
-        @Param('id', new ParseUUIDPipe()) id: string,
-        @Body() dto: UpdateBookingStatusDto,
-    ) {
-        return this.bookingService.updateStatus(id, dto.status);
+    async updateStatus(@Param('id') id: string, @Body() updateBookingStatusDto: UpdateBookingStatusDto) {
+        return this.bookingService.updateStatus(id, updateBookingStatusDto.status);
     }
 
     @Delete(':id')
-    remove(@Param('id', new ParseUUIDPipe()) id: string, @Request() req) {
-        return this.bookingService.remove(id, req.user.id);
+    async remove(@Param('id') id: string) {
+        const user = await this.usersService.getDefaultUser();
+        return this.bookingService.remove(id, user.id);
     }
 }

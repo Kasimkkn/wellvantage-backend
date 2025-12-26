@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -22,6 +22,19 @@ export class UsersService {
         return this.usersRepository.findOne({ where: { id } });
     }
 
+    // Get the default/static user
+    async getDefaultUser(): Promise<User> {
+        const user = await this.usersRepository.findOne({
+            where: { email: 'demo@wellvantage.com' },
+        });
+
+        if (!user) {
+            throw new Error('Default user not found');
+        }
+
+        return user;
+    }
+
     async create(userData: Partial<User>): Promise<User> {
         const user = this.usersRepository.create(userData);
         return this.usersRepository.save(user);
@@ -29,13 +42,10 @@ export class UsersService {
 
     async update(id: string, userData: Partial<User>): Promise<User> {
         await this.usersRepository.update(id, userData);
-
-        const user = await this.findById(id);
-        if (!user) {
-            throw new NotFoundException(`User ${id} not found`);
+        const updatedUser = await this.usersRepository.findOne({ where: { id } });
+        if (!updatedUser) {
+            throw new Error('User not found');
         }
-
-        return user;
+        return updatedUser;
     }
-
 }

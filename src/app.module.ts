@@ -3,13 +3,13 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
 import { AvailabilityModule } from './availability/availability.module';
 import { BookingModule } from './booking/booking.module';
+import { User } from './users/entities/user.entity';
 import { Availability } from './availability/entities/availability.entity';
 import { Booking } from './booking/entities/booking.entity';
-import { UsersModule } from './users/users.module';
-import { User } from './users/entities/user.entity';
+import { UserSeeder } from './database/seeders/user.seeder';
 
 @Module({
   imports: [
@@ -25,17 +25,17 @@ import { User } from './users/entities/user.entity';
         username: configService.get('DATABASE_USER'),
         password: configService.get('DATABASE_PASSWORD'),
         database: configService.get('DATABASE_NAME'),
-        entities: [Availability, Booking, User],
+        entities: [User, Availability, Booking],
         synchronize: true, // Set to false in production
       }),
       inject: [ConfigService],
     }),
+    TypeOrmModule.forFeature([User]), // Add this for seeder
     UsersModule,
-    AuthModule,
     AvailabilityModule,
     BookingModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, UserSeeder], // Add UserSeeder here
 })
 export class AppModule { }
